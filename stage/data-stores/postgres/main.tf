@@ -14,14 +14,11 @@ provider "aws" {
   region = "us-east-2"
 }
 
-resource "aws_db_instance" "example" {
-  identifier = "zentropy-terraform"
-  engine = "postgres"
-  allocated_storage = 10
-  instance_class = "db.t3.micro"
-  skip_final_snapshot = true
-  db_name = "doggr"
 
-  username = var.db_username
-  password = var.db_password
+module "postgres" {
+  source = "../../../modules/data-stores/postgres"
+
+  db_username = var.db_username
+  db_password = var.db_password
+
 }

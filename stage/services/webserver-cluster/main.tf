@@ -3,11 +3,7 @@ provider "aws" {
   # Reminder use IAM access creds for key/secret, not the ones that connect IAM accounts to amazon accounts
 }
 
-variable "server_port" {
-  description = "Port the server uses for HTTP requests"
-  type        = number
-  default     = 8080
-}
+
 
 # Get default VPC for my region
 data "aws_vpc" "default" {
@@ -148,10 +144,4 @@ resource "aws_lb_listener_rule" "asg" {
     type = "forward"
     target_group_arn = aws_lb_target_group.asg.arn
   }
-}
-
-# Helpful output echo of the eventual public ip to the load balancer once TF apply has completed provisioning
-output "alb_dns_name" {
-  value = aws_lb.example.dns_name
-  description = "The domain name of the load balancer"
 }

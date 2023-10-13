@@ -1,5 +1,4 @@
-# Ch 2 completed
-- Moved Ch2 stuff into Ch2 subdir to as per Ch3 instructions
+This repo uses [just](https://github.com/casey/just) for management of init flags.  You can use `just [web|s3|postgres] [init|plan|apply] from anywhere in the project to perform terraform actions on that piece.
 
 # Ch 3 notes
 - Takes 2 steps to properly configure state for a project

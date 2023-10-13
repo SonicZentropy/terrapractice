@@ -1,15 +1,9 @@
 provider "aws" {
-  region = "us-east-2"
+  region = "us-west-2"
   # Reminder use IAM access creds for key/secret, not the ones that connect IAM accounts to amazon accounts
 }
 
-variable "server_port" {
-  description = "Port the server uses for HTTP requests"
-  type        = number
-  default     = 8080
-}
-
-# Get default VPC for my region
+# Get default VPC for region
 data "aws_vpc" "default" {
   default = true
 }
@@ -20,11 +14,17 @@ data "aws_subnets" "default" {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+
+  # Add this filter to select only the subnets in the us-west-2[a-c] Availability Zone because 2d doesn't support t2.micro
+  filter {
+    name   = "availability-zone"
+    values = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  }
 }
 
 # Open port 8080 to all traffic
 resource "aws_security_group" "instance" {
-  name = "terraform-example-instance"
+  name = "mem-overflow-instance"
 
   ingress {
     from_port   = var.server_port
@@ -33,9 +33,9 @@ resource "aws_security_group" "instance" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-# Configure actual EC2 instance that runs basic busybox hello world server
-resource "aws_launch_configuration" "example" {
-  image_id        = "ami-0fb653ca2d3203ac1"
+# Configure actual EC2 instance that runs basic busybox hello world serve
+resource "aws_launch_configuration" "mem-overflow-launch-config" {
+  image_id        = "ami-03f65b8614a860c29"
   instance_type   = "t2.micro"
   security_groups = [aws_security_group.instance.id]
 
@@ -51,9 +51,9 @@ resource "aws_launch_configuration" "example" {
 }
 
 # Creates group of instances from 2 to 4 that will scale up based on demand behind the load balancer
-resource "aws_autoscaling_group" "example" {
-  launch_configuration = aws_launch_configuration.example.name # Name from launch config above
-  vpc_zone_identifier  = data.aws_subnets.default.ids          # Get subnet IDs from data source
+resource "aws_autoscaling_group" "mem-overflow-asg" {
+  launch_configuration = aws_launch_configuration.mem-overflow-launch-config.name # Name from launch config above
+  vpc_zone_identifier  = data.aws_subnets.default.ids                             # Get subnet IDs from data source
 
   # Get list of health-checkers based on ASG
   target_group_arns = [aws_lb_target_group.asg.arn]
@@ -64,14 +64,14 @@ resource "aws_autoscaling_group" "example" {
 
   tag {
     key                 = "Name"
-    value               = "terraform-asg-example"
+    value               = "mem-overflow-asg"
     propagate_at_launch = true
   }
 }
 
 # Security group to allow ALB listeners to allow incoming reqs on 80 and allow all outgoing (for itself to communicate with VPCs)
 resource "aws_security_group" "alb" {
-  name = "terraform-example-alb"
+  name = "mem-overflow-alb"
 
   ingress {
     from_port   = 80
@@ -91,8 +91,8 @@ resource "aws_security_group" "alb" {
 
 
 # Load balancer that will distribute traffic to the instances
-resource "aws_lb" "example" {
-  name               = "terraform-asg-example"
+resource "aws_lb" "mem-overflow-lb" {
+  name               = "mem-overflow-asg"
   load_balancer_type = "application"
   subnets            = data.aws_subnets.default.ids # Which VPC subnets to communicate on - default is WIDE OPEN
   security_groups    = [aws_security_group.alb.id]  # Security group to allow incoming requests on 80
@@ -100,7 +100,7 @@ resource "aws_lb" "example" {
 
 # Target group checks instance health for the load balancer
 resource "aws_lb_target_group" "asg" {
-  name     = "terraform-asg-example"
+  name     = "mem-overflow-asg"
   port     = var.server_port
   protocol = "HTTP"
   vpc_id   = data.aws_vpc.default.id
@@ -119,7 +119,7 @@ resource "aws_lb_target_group" "asg" {
 
 # This is what forwards the actual requests to the correct destination behind the load balancer
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.example.arn
+  load_balancer_arn = aws_lb.mem-overflow-lb.arn
   port              = 80
   protocol          = "HTTP"
 
@@ -151,8 +151,11 @@ resource "aws_lb_listener_rule" "asg" {
   }
 }
 
-# Helpful output echo of the eventual public ip to the load balancer once TF apply has completed provisioning
-output "alb_dns_name" {
-  value       = aws_lb.example.dns_name
-  description = "The domain name of the load balancer"
+
+terraform {
+  # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
+  backend "s3" {
+    key = "stage/services/webserver-cluster/terraform.tfstate"
+  }
 }
+

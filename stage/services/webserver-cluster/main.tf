@@ -1,3 +1,10 @@
+terraform {
+  # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
+  backend "s3" {
+    key = "stage/services/webserver-cluster/terraform.tfstate"
+  }
+}
+
 provider "aws" {
   region = "us-west-2"
   # Reminder use IAM access creds for key/secret, not the ones that connect IAM accounts to amazon accounts
@@ -39,11 +46,12 @@ resource "aws_launch_configuration" "mem-overflow-launch-config" {
   instance_type   = "t2.micro"
   security_groups = [aws_security_group.instance.id]
 
-  user_data = <<-EOF
-              #!/bin/bash
-              echo "Hello, World" > index.html
-              nohup busybox httpd -f -p ${var.server_port} &
-              EOF
+  # Render the User Data script as a template
+  user_data = templatefile("user-data.sh", {
+    server_port = var.server_port
+    db_address  = data.terraform_remote_state.db.outputs.address
+    db_port     = data.terraform_remote_state.db.outputs.port
+  })
   # Otherwise we'll destroy the old one first, but it will still have reference in the ASG
   lifecycle {
     create_before_destroy = true
@@ -151,11 +159,11 @@ resource "aws_lb_listener_rule" "asg" {
   }
 }
 
-
-terraform {
-  # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
-  backend "s3" {
-    key = "stage/services/webserver-cluster/terraform.tfstate"
+data "terraform_remote_state" "db" {
+  backend = "s3"
+  config = {
+    bucket = "zentropy-mem-overflow-state"
+    key    = "stage/data-stores/postgres/terraform.tfstate"
+    region = "us-west-2"
   }
 }
-

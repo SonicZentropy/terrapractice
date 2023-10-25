@@ -1,9 +1,9 @@
 output "address" {
-  value       = aws_db_instance.mem-overflow.address
+  value       = module.postgres.address
   description = "Connect to the database at this endpoint"
 }
 
 output "port" {
-  value       = aws_db_instance.mem-overflow.port
+  value       = module.postgres.port
   description = "The port the database is listening on"
 }

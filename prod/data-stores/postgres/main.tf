@@ -16,6 +16,6 @@ resource "aws_db_instance" "mem-overflow" {
 terraform {
   # Reminder this is partial config, must use terraform init -backend-config=backend.hcl (just init)
   backend "s3" {
-    key = "stage/data-stores/postgres/terraform.tfstate"
+    key = "prod/data-stores/postgres/terraform.tfstate"
   }
 }

@@ -48,9 +48,7 @@ resource "aws_launch_configuration" "mem-overflow-launch-config" {
 
 # Creates group of instances from 2 to 4 that will scale up based on demand behind the load balancer
 resource "aws_autoscaling_group" "mem-overflow-asg" {
-  # Explicitly depend on the launch configuration's name so each time it's
-  # replaced, this ASG is also replaced
-  name = "${var.cluster_name}-${aws_launch_configuration.mem-overflow-launch-config.name}"
+  name = var.cluster_name
 
   launch_configuration = aws_launch_configuration.mem-overflow-launch-config.name # Name from launch config above
   vpc_zone_identifier  = data.aws_subnets.default.ids                             # Get subnet IDs from data source
@@ -61,6 +59,14 @@ resource "aws_autoscaling_group" "mem-overflow-asg" {
 
   min_size = var.min_size
   max_size = var.max_size
+
+  # Use instance refresh to roll out changes to the ASG
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+  }
 
   tag {
     key                 = "Name"

@@ -12,6 +12,7 @@ module "webserver_cluster" {
   instance_type = "t2.micro"
   min_size      = 2
   max_size      = 3
+  enable_autoscaling = false
 }
 
 # Allows testing via connecting to port 12345 ONLY on staging, does not affect prod

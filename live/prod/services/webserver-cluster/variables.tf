@@ -18,3 +18,4 @@ variable "cluster_name" {
   type        = string
   default     = "webservers-prod"
 }
+

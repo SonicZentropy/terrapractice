@@ -28,7 +28,7 @@ data "aws_subnets" "default" {
 
 # Configure actual EC2 instance that runs basic busybox hello world serve
 resource "aws_launch_configuration" "mem-overflow-launch-config" {
-  image_id        = "ami-03f65b8614a860c29"
+  image_id        = var.ami #"ami-03f65b8614a860c29"
   instance_type   = var.instance_type # "t2.micro"
   security_groups = [aws_security_group.instance.id]
 
@@ -37,6 +37,7 @@ resource "aws_launch_configuration" "mem-overflow-launch-config" {
     server_port = var.server_port
     db_address  = data.terraform_remote_state.db.outputs.address
     db_port     = data.terraform_remote_state.db.outputs.port
+    server_text = var.server_text
   })
 
   # Otherwise we'll destroy the old one first, but it will still have reference in the ASG
@@ -47,6 +48,8 @@ resource "aws_launch_configuration" "mem-overflow-launch-config" {
 
 # Creates group of instances from 2 to 4 that will scale up based on demand behind the load balancer
 resource "aws_autoscaling_group" "mem-overflow-asg" {
+  name = var.cluster_name
+
   launch_configuration = aws_launch_configuration.mem-overflow-launch-config.name # Name from launch config above
   vpc_zone_identifier  = data.aws_subnets.default.ids                             # Get subnet IDs from data source
 
@@ -57,10 +60,31 @@ resource "aws_autoscaling_group" "mem-overflow-asg" {
   min_size = var.min_size
   max_size = var.max_size
 
+  # Use instance refresh to roll out changes to the ASG
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+  }
+
   tag {
     key                 = "Name"
     value               = var.cluster_name
     propagate_at_launch = true
+  }
+
+  dynamic "tag" {
+    for_each = {
+      for key, value in var.custom_tags:
+      key => upper(value)
+      if key != "Name"
+    }
+    content {
+      key = tag.key
+      value = tag.value
+      propagate_at_launch = true
+    }
   }
 }
 
@@ -158,6 +182,25 @@ resource "aws_lb_listener_rule" "asg" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.asg.arn
   }
+}
+
+resource "aws_autoscaling_schedule" "scale_out_during_business_hours" {
+  count = var.enable_autoscaling ? 1 : 0
+  scheduled_action_name = "${var.cluster_name}-scale-out-during-business-hours"
+  min_size = 2
+  max_size = 10
+  desired_capacity = 10
+  recurrence = "0 9 * * *"
+  autoscaling_group_name = aws_autoscaling_group.mem-overflow-asg.name
+}
+resource "aws_autoscaling_schedule" "scale_in_at_night" {
+  count                  = var.enable_autoscaling ? 1 : 0
+  scheduled_action_name  = "${var.cluster_name}-scale-in-at-night"
+  min_size               = 2
+  max_size               = 10
+  desired_capacity       = 2
+  recurrence             = "0 17 * * *"
+  autoscaling_group_name = aws_autoscaling_group.mem-overflow-asg.name
 }
 
 data "terraform_remote_state" "db" {

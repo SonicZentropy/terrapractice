@@ -4,14 +4,18 @@ provider "aws" {
 
 module "webserver_cluster" {
   source       = "../../../../modules/services/webserver-cluster"
-  cluster_name = var.cluster_name
 
+  ami = "ami-03f65b8614a860c29"
+  server_text = "Hello World from server_text"
+
+  cluster_name = var.cluster_name
   db_remote_state_bucket = var.db_remote_state_bucket
   db_remote_state_key    = var.db_remote_state_key
 
   instance_type = "t2.micro"
   min_size      = 2
   max_size      = 3
+  enable_autoscaling = false
 }
 
 # Allows testing via connecting to port 12345 ONLY on staging, does not affect prod

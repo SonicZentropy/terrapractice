@@ -7,3 +7,8 @@ output "port" {
   value       = module.postgres.port
   description = "The port the database is listening on"
 }
+
+output "db_creds" {
+  value     = local.db_creds
+  sensitive = true
+}

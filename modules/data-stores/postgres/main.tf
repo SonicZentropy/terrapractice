@@ -2,7 +2,7 @@ provider "aws" {
   region = "us-west-2"
 }
 
-
+# Encrypted File via AWS CLI
 data "aws_kms_secrets" "creds" {
   secret {
     name    = "db"
@@ -10,8 +10,18 @@ data "aws_kms_secrets" "creds" {
   }
 }
 
+# AWS Secrets Manager
+data "aws_secretsmanager_secret_version" "creds" {
+  secret_id = "db-creds"
+}
+
 locals {
-  db_creds = yamldecode(data.aws_kms_secrets.creds.plaintext["db"])
+  #ENCRYPTED FILE
+  #db_creds = yamldecode(data.aws_kms_secrets.creds.plaintext["db"])
+  #AWS Secrets Manager
+  db_creds = jsondecode(
+    data.aws_secretsmanager_secret_version.creds.secret_string
+  )
 }
 
 resource "aws_db_instance" "mem-overflow" {

@@ -10,20 +10,6 @@ data "aws_kms_secrets" "creds" {
   }
 }
 
-# AWS Secrets Manager
-data "aws_secretsmanager_secret_version" "creds" {
-  secret_id = "db-creds"
-}
-
-locals {
-  #ENCRYPTED FILE
-  #db_creds = yamldecode(data.aws_kms_secrets.creds.plaintext["db"])
-  #AWS Secrets Manager
-  db_creds = jsondecode(
-    data.aws_secretsmanager_secret_version.creds.secret_string
-  )
-}
-
 resource "aws_db_instance" "mem-overflow" {
   identifier_prefix   = "zentropy-mem-overflow"
   engine              = "postgres"
@@ -32,6 +18,6 @@ resource "aws_db_instance" "mem-overflow" {
   skip_final_snapshot = true
   db_name             = var.db_name
   # How should we set the username and password?
-  username = local.db_creds.username
-  password = local.db_creds.password
+  username = var.db_username
+  password = var.db_password
 }

@@ -19,7 +19,7 @@ jobs:
       # Authenticate to AWS using OIDC
       - uses: aws-actions/configure-aws-credentials@v1
         with:
-          # Specify the IAM role to assume
+          # Specify the IAM role to assume -- THIS IS AN OUTPUT FROM THE TERRAFORM OIDC APPLY
           role-to-assume: arn:aws:iam::001857796974:role/github-actions-oidc-memoverrun20231116013335290400000001
           aws-region: us-west-2
 

@@ -19,7 +19,7 @@ jobs:
       # Authenticate to AWS using OIDC
       - uses: aws-actions/configure-aws-credentials@v1
         with:
-          # Specify the IAM role to assume here
+          # Specify the IAM role to assume
           role-to-assume: arn:aws:iam::123456789012:role/example-role
           aws-region: us-west-2
 

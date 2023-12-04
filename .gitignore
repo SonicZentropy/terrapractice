@@ -3,3 +3,5 @@
 *.tfstate
 *.tfstate.backup
 **/*db-creds.yml
+**/target
+

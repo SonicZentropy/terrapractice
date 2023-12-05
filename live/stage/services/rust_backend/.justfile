@@ -16,11 +16,10 @@ dockerLogin:
     aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 001857796974.dkr.ecr.us-west-2.amazonaws.com
 
 init:
-    # Note this init uses the backend config shared portions
     terraform init -backend-config=../../../global/config/backend.hcl
 apply:
     terraform apply
 plan:
     terraform plan
 destroy:
-    terraform destroy
+    terraform destroy -target aws_ecr_repository.app_ecr_repo
